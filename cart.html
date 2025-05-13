@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cart - KopiKisah</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+</head>
+
+<body class="bg-light">
+    <div class="container mt-5">
+        <h1 class="mb-4">Keranjang Belanja</h1>
+        <div id="cart-container"></div>
+        <div class="text-end mt-4">
+            <h4>Total: Rp<span id="total-price">0</span></h4>
+        </div>
+        <div class="text-end mt-2">
+            <button class="btn btn-danger" onclick="clearCart()">Kosongkan Keranjang</button>
+        </div>
+        <!-- Form Pembayaran -->
+        <div class="mt-4 p-4 bg-white rounded shadow-sm">
+            <h5 class="mb-3">Informasi Pembayaran</h5>
+            <form id="payment-form">
+                <div class="mb-3">
+                    <label for="name" class="form-label">Nama Lengkap</label>
+                    <input type="text" class="form-control" id="name" required />
+                </div>
+                <div class="mb-3">
+                    <label for="email" class="form-label">Email</label>
+                    <input type="email" class="form-control" id="email" required />
+                </div>
+                <div class="mb-3">
+                    <label for="method" class="form-label">Metode Pembayaran</label>
+                    <select class="form-select" id="method" required>
+                        <option value="" disabled selected>Pilih metode</option>
+                        <option value="Transfer Bank">Transfer Bank</option>
+                        <option value="E-Wallet">E-Wallet (Dana, OVO, dll)</option>
+                        <option value="COD">Cash on Delivery</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-success">Bayar Sekarang</button>
+            </form>
+        </div>
+        <div class="mt-4">
+            <a href="shop.html" class="btn btn-secondary">← Kembali ke Toko</a>
+        </div>
+    </div>
+
+    <script>
+        // Ambil data cart dari localStorage atau inisialisasi array kosong
+        let cart = JSON.parse(localStorage.getItem("cart")) || [];
+
+        // Fungsi untuk menampilkan isi keranjang di halaman
+        function renderCart() {
+            const container = document.getElementById("cart-container");
+            const totalElement = document.getElementById("total-price");
+
+            // Kosongkan isi container sebelum dirender ulang
+            container.innerHTML = "";
+
+            // Jika keranjang kosong, tampilkan pesan
+            if (cart.length === 0) {
+                container.innerHTML = "<p>Keranjang masih kosong.</p>";
+                totalElement.innerText = "0";
+                return;
+            }
+
+            let total = 0; // Total harga semua item
+
+            // Buat tabel untuk menampilkan daftar item
+            const table = document.createElement("table");
+            table.className = "table table-bordered bg-white";
+
+            // Header tabel
+            const thead = document.createElement("thead");
+            thead.innerHTML = `
+        <tr>
+          <th>Produk</th>
+          <th>Harga</th>
+          <th>Jumlah</th>
+          <th>Subtotal</th>
+          <th colspan="2" class="text-center">Aksi</th>
+        </tr>`;
+            table.appendChild(thead);
+
+            // Isi tabel dengan data dari cart
+            const tbody = document.createElement("tbody");
+
+            // Loop tiap item dalam cart
+            cart.forEach((item, index) => {
+                const subtotal = item.price * item.quantity; // Harga total per item
+                total += subtotal; // Tambahkan ke total harga
+
+                // Buat baris untuk tiap item
+                const row = document.createElement("tr");
+                row.innerHTML = `
+          <td>${item.name}</td>
+          <td>Rp${item.price.toLocaleString('id-ID')}</td>
+          <td>${item.quantity}</td>
+          <td>Rp${subtotal.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+          <td><button class="btn btn-sm btn-success" onclick="addItem(${index})">Add</button></td>
+          <td><button class="btn btn-sm btn-danger" onclick="removeItem(${index})">Hapus</button></td>
+        `;
+                tbody.appendChild(row); // Tambahkan baris ke tabel
+            });
+
+            table.appendChild(tbody); // Tambahkan body ke tabel
+            container.appendChild(table); // Tambahkan tabel ke halaman
+            totalElement.innerText = total.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); // Update total harga di bawah
+        }
+
+        // Fungsi untuk menghapus satu item dari cart
+        function removeItem(index) {
+            cart.splice(index, 1); // Hapus item dari array berdasarkan index
+            localStorage.setItem("cart", JSON.stringify(cart)); // Simpan perubahan ke localStorage
+            renderCart(); // Render ulang isi keranjang
+        }
+
+        // Fungsi untuk menambah jumlah item (+1)
+        function addItem(index) {
+            cart[index].quantity += 1; // Tambah jumlah item
+            localStorage.setItem("cart", JSON.stringify(cart)); // Simpan perubahan
+            renderCart(); // Render ulang tampilan
+        }
+
+        // Fungsi untuk mengosongkan seluruh keranjang
+        function clearCart() {
+            localStorage.removeItem("cart"); // Hapus data dari localStorage
+            cart = []; // Kosongkan array
+            renderCart(); // Render ulang tampilan
+        }
+
+        // Tangani form pembayaran
+        document.getElementById("payment-form").addEventListener("submit", function (e) {
+            e.preventDefault(); // Mencegah reload halaman
+
+            // Ambil data form
+            const name = document.getElementById("name").value.trim();
+            const email = document.getElementById("email").value.trim();
+            const method = document.getElementById("method").value;
+
+            // Cek jika keranjang kosong
+            if (cart.length === 0) {
+                alert("Keranjang masih kosong!");
+                return;
+            }
+
+            // Simulasi penyimpanan transaksi
+            const transaction = {
+                buyer: { name, email, method },
+                cart: cart,
+                total: cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
+                date: new Date().toLocaleString()
+            };
+
+            // Simpan ke localStorage (simulasi, nanti bisa kirim ke backend)
+            localStorage.setItem("last_transaction", JSON.stringify(transaction));
+
+            // Bersihkan keranjang
+            clearCart();
+
+            // Notifikasi berhasil
+            alert(`Pembayaran berhasil!\nTerima kasih, ${name}.\nDetail telah disimpan.`);
+        });
+
+
+        // Jalankan render saat halaman dibuka
+        renderCart();
+    </script>
+</body>
+
+</html>
